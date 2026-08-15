@@ -10,7 +10,11 @@ class Settings(BaseSettings):
     APP_CORS_ORIGINS: str = "https://sunuyaram.shop,https://www.sunuyaram.shop,http://localhost:3000"
     API_BASE_URL: str = "https://api.namabeauty.shop"
 
-    DATABASE_URL: str = "postgres://sunuyaram:sunuyaram@sunuyaram_sunuyaram:5432/sunuyaram?sslmode=disable"
+    DATABASE_URL: str = ""
+
+    @property
+    def database_url(self) -> str:
+        return self.DATABASE_URL or "postgres://sunuyaram:sunuyaram@sunuyaram_sunuyaram:5432/sunuyaram?sslmode=disable"
 
     GOOGLE_SHEETS_WEBHOOK_URL: Optional[str] = None
 

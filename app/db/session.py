@@ -11,7 +11,7 @@ def _make_async_url(url: str) -> str:
 
 
 settings = get_settings()
-async_url = _make_async_url(settings.DATABASE_URL)
+async_url = _make_async_url(settings.database_url)
 
 engine = create_async_engine(
     async_url,
