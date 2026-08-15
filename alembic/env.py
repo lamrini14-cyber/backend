@@ -17,8 +17,11 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+DEFAULT_DB_URL = "postgres://sunuyaram:sunuyaram@sunuyaram_sunuyaram:5432/sunuyaram?sslmode=disable"
+
+
 def get_url() -> str:
-    url = os.environ.get("DATABASE_URL", "")
+    url = os.environ.get("DATABASE_URL", "") or DEFAULT_DB_URL
     url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url
