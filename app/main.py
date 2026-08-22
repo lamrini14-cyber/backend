@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,18 +12,25 @@ from app.routers import geo, health, orders
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_RETRIES = 5
+RETRY_DELAY = 3
+
 
 def run_alembic_upgrade() -> None:
-    logger.info("Running Alembic migrations...")
-    result = subprocess.run(
-        ["alembic", "upgrade", "head"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        logger.error("Alembic upgrade failed: %s", result.stderr)
-        raise RuntimeError(f"Alembic upgrade head failed:\n{result.stderr}")
-    logger.info("Alembic migrations complete")
+    for attempt in range(1, MAX_RETRIES + 1):
+        logger.info("Running Alembic migrations (attempt %d/%d)...", attempt, MAX_RETRIES)
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            logger.info("Alembic migrations complete")
+            return
+        logger.warning("Alembic attempt %d failed: %s", attempt, result.stderr)
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_DELAY)
+    raise RuntimeError(f"Alembic upgrade head failed after {MAX_RETRIES} attempts:\n{result.stderr}")
 
 
 @asynccontextmanager
