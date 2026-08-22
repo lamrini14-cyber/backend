@@ -4,9 +4,17 @@ from app.config import get_settings
 
 
 def _make_async_url(url: str) -> str:
-    """Convert postgres:// or postgresql:// to postgresql+asyncpg://"""
+    """Convert postgres:// or postgresql:// to postgresql+asyncpg://
+    and strip sslmode param which asyncpg doesn't support."""
     url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    # asyncpg does not accept sslmode as a query param
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    params.pop("sslmode", None)
+    cleaned_query = urlencode(params, doseq=True)
+    url = urlunparse(parsed._replace(query=cleaned_query))
     return url
 
 
