@@ -62,6 +62,7 @@ async def create_order(
     return OrderCreateResponse(
         order_id=str(order.id),
         order_number=order.order_number,
+        customer_name=order.customer_name,
         total_fcfa=order.total_fcfa,
         tier_base_fcfa=order.tier_base_fcfa,
         upsell_accepted=order.upsell_accepted,

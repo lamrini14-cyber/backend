@@ -46,6 +46,7 @@ class OrderCreateRequest(BaseModel):
 class OrderCreateResponse(BaseModel):
     order_id: str
     order_number: str
+    customer_name: str
     total_fcfa: int
     tier_base_fcfa: int
     upsell_accepted: bool

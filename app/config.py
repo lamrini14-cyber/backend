@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     MAXMIND_ACCOUNT_ID: Optional[int] = None
     MAXMIND_LICENSE_KEY: Optional[str] = None
-    MAXMIND_STRICT_MODE: bool = True
+    MAXMIND_STRICT_MODE: bool = False
 
     PHONE_WHITELIST: str = "0550000000"
 

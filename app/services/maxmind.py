@@ -12,13 +12,16 @@ async def check_ip(ip: str) -> tuple[bool, dict]:
     """
     Check IP against MaxMind GeoIP2 Insights.
     Returns (is_allowed, metadata_dict).
-    Falls back to allowed=True if MaxMind is not configured (dev mode).
+    Falls back to allowed=True if MaxMind is not configured.
     """
     settings = get_settings()
 
     if not settings.MAXMIND_ACCOUNT_ID or not settings.MAXMIND_LICENSE_KEY:
-        logger.warning("MaxMind not configured — skipping geo check (dev mode)")
+        logger.warning("MaxMind not configured — allowing all IPs")
         return True, {"country": "XX", "note": "maxmind_not_configured"}
+
+    if ip in ("127.0.0.1", "::1"):
+        return True, {"country": "XX", "note": "localhost"}
 
     url = f"https://geoip.maxmind.com/geoip/v2.1/insights/{ip}"
     auth = (str(settings.MAXMIND_ACCOUNT_ID), settings.MAXMIND_LICENSE_KEY)
