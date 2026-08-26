@@ -10,7 +10,7 @@ from sqlalchemy import (
     Text,
     ForeignKey,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -53,7 +53,7 @@ class Order(Base):
     payment_method = Column(String(16), nullable=False, default="COD")
     status = Column(String(32), nullable=False, default="new")
 
-    ip_address = Column(INET, nullable=True)
+    ip_address = Column(String(45), nullable=True)
     ip_country = Column(String(2), nullable=True)
     maxmind_risk = Column(JSONB, nullable=True)
     is_whitelisted = Column(Boolean, nullable=False, default=False)
