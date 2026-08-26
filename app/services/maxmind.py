@@ -42,9 +42,6 @@ async def check_ip(ip: str) -> tuple[bool, dict]:
 
     blocked_reasons: list[str] = []
 
-    if country != "SN":
-        blocked_reasons.append("COUNTRY_NOT_SN")
-
     if traits.get("is_anonymous_vpn") or traits.get("is_hosting_provider"):
         blocked_reasons.append("VPN_OR_HOSTING")
 
