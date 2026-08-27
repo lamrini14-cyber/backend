@@ -61,16 +61,21 @@ async def create_order(
     maxmind_risk: dict = {}
     ip_country = "XX"
 
-    if not is_whitelisted:
-        allowed, maxmind_risk = await check_ip(ip_address)
-        ip_country = maxmind_risk.get("country", "XX")
-        if not allowed:
-            blocked_reasons = maxmind_risk.get("blocked_reasons", [])
-            if "VPN_OR_HOSTING" in blocked_reasons or "TOR" in blocked_reasons:
-                raise PermissionError("VPN_DETECTED")
-            raise PermissionError("IP_NOT_ALLOWED")
+    if not is_whitelisted and settings.MAXMIND_ACCOUNT_ID and settings.MAXMIND_LICENSE_KEY:
+        try:
+            allowed, maxmind_risk = await check_ip(ip_address)
+            ip_country = maxmind_risk.get("country", "XX")
+            if not allowed:
+                blocked_reasons = maxmind_risk.get("blocked_reasons", [])
+                if "VPN_OR_HOSTING" in blocked_reasons or "TOR" in blocked_reasons:
+                    raise PermissionError("VPN_DETECTED")
+        except PermissionError:
+            raise
+        except Exception as exc:
+            logger.warning("MaxMind check failed, allowing order: %s", exc)
+            maxmind_risk = {"error": str(exc), "note": "check_failed_allowed"}
     else:
-        maxmind_risk = {"note": "whitelisted"}
+        maxmind_risk = {"note": "whitelisted" if is_whitelisted else "maxmind_not_configured"}
 
     if not await _check_rate_limit(db, phone):
         raise LookupError("RATE_LIMIT")

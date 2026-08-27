@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     MAXMIND_LICENSE_KEY: Optional[str] = None
     MAXMIND_STRICT_MODE: bool = False
 
-    PHONE_WHITELIST: str = "0550000000"
+    PHONE_WHITELIST: str = "0550000000,0781234555"
 
     META_PIXEL_ID: Optional[str] = None
     META_CAPI_ACCESS_TOKEN: Optional[str] = None
