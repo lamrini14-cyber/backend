@@ -6,6 +6,18 @@ UPSELL_PRICE = 540
 
 VALID_SLUGS = {"nuit-calm", "energie-vit", "confort-digest"}
 
+PRODUCT_NAMES_FR: dict[str, str] = {
+    "nuit-calm": "NuitCalm — Sommeil & Sérénité",
+    "energie-vit": "ÉnergieVit — Énergie & Vitalité",
+    "confort-digest": "ConfortDigest — Confort Digestif",
+}
+
+PRODUCT_SKUS: dict[str, str] = {
+    "nuit-calm": "SY-NC-001",
+    "energie-vit": "SY-EV-002",
+    "confort-digest": "SY-CD-003",
+}
+
 
 def compute_total(
     slugs: list[str],

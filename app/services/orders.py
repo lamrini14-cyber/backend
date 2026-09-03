@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def _generate_order_number() -> str:
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    return f"SY-{today}-{suffix}"
+    return f"SUNUYARAMA-{today}-{suffix}"
 
 
 async def _check_rate_limit(db: AsyncSession, phone: str) -> bool:
@@ -157,25 +157,26 @@ async def _post_order_tasks(
     tracking: dict,
     ip_address: str,
 ) -> None:
+    product_names = []
+    product_skus = []
+    product_quantities = []
+    for item in order.items:
+        product_names.append(pricing_svc.PRODUCT_NAMES_FR.get(item.product_slug, item.product_slug))
+        product_skus.append(pricing_svc.PRODUCT_SKUS.get(item.product_slug, item.product_slug))
+        product_quantities.append(str(item.quantity))
+
     sheet_payload = {
-        "order_id": str(order.id),
-        "order_number": order.order_number,
-        "created_at": order.created_at.isoformat(),
-        "customer_name": order.customer_name,
+        "date": order.created_at.strftime("%d/%m/%Y"),
+        "order_id": order.order_number,
+        "country": "Sénégal",
+        "name": order.customer_name,
         "phone": order.phone,
-        "locale": order.locale,
-        "tier_count": order.tier_count,
-        "tier_base_fcfa": order.tier_base_fcfa,
-        "upsell_accepted": order.upsell_accepted,
-        "upsell_sku": order.upsell_sku,
-        "upsell_price_fcfa": order.upsell_price_fcfa,
-        "total_fcfa": order.total_fcfa,
-        "items": [{"slug": i.product_slug, "qty": i.quantity, "line_type": i.line_type} for i in order.items],
-        "payment_method": "COD",
-        "ip_country": order.ip_country,
-        "is_whitelisted": order.is_whitelisted,
-        "event_id": order.event_id,
-        "status": order.status,
+        "product": "/".join(product_names),
+        "sku": "/".join(product_skus),
+        "quantity": "/".join(product_quantities),
+        "total_price": order.total_fcfa,
+        "currency": "CFA",
+        "status": "",
     }
 
     capi_kwargs = dict(
