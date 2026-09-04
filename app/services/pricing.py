@@ -1,8 +1,8 @@
 from typing import Optional
 
-TIER_PRICES: dict[int, int] = {1: 540, 2: 950, 3: 1400}
-UNIT_DISPLAY_FCFA = 540
-UPSELL_PRICE = 540
+TIER_PRICES: dict[int, int] = {1: 23000, 2: 43000, 3: 56800}
+UNIT_DISPLAY_FCFA = 23000
+UPSELL_PRICE = 23000
 
 VALID_SLUGS = {"nuit-calm", "energie-vit", "confort-digest"}
 
