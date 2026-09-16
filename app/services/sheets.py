@@ -24,14 +24,19 @@ async def sync_order_to_sheet(payload: dict[str, Any]) -> bool:
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
-                logger.info("Sheet sync OK (attempt %d)", attempt)
+                logger.info("Sheet sync OK (attempt %d): %s", attempt, resp.text[:200])
                 return True
         except httpx.HTTPError as exc:
             logger.warning("Sheet sync attempt %d failed: %s", attempt, exc)
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(2 ** attempt)
+        except Exception as exc:
+            logger.error("Sheet sync unexpected error (attempt %d): %s", attempt, exc)
+            if attempt < MAX_RETRIES:
+                await asyncio.sleep(2 ** attempt)
 
+    logger.error("Sheet sync FAILED after %d attempts for order: %s", MAX_RETRIES, payload.get("order_id", "unknown"))
     return False
