@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def _generate_order_number() -> str:
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    return f"NAMA-{today}-{suffix}"
+    return f"SUNUYARAMA-{today}-{suffix}"
 
 
 async def _check_rate_limit(db: AsyncSession, phone: str) -> bool:
