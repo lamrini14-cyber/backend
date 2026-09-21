@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     APP_ENV: str = "development"
     APP_CORS_ORIGINS: str = "https://sunuyaram.shop,https://www.sunuyaram.shop,http://localhost:3000"
-    API_BASE_URL: str = "https://api.sunuyaram.shop"
+    API_BASE_URL: str = "https://api.namabeauty.shop"
 
     DATABASE_URL: str = ""
 
