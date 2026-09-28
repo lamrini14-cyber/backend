@@ -118,14 +118,18 @@ async def create_order(
         user_agent=tracking_dict.get("user_agent"),
     )
 
-    unique_slugs = list(dict.fromkeys(s for s in slugs if s in pricing_svc.VALID_SLUGS))
-    tier_price_per_unit = tier_base // max(len(unique_slugs), 1)
+    slug_counts = {}
+    for slug in slugs:
+        if slug in pricing_svc.VALID_SLUGS:
+            slug_counts[slug] = slug_counts.get(slug, 0) + 1
 
-    for slug in unique_slugs:
+    tier_price_per_unit = tier_base // max(len(slugs), 1)
+
+    for slug, qty in slug_counts.items():
         order.items.append(
             OrderItem(
                 product_slug=slug,
-                quantity=1,
+                quantity=qty,
                 line_type="standard",
                 unit_price_fcfa=tier_price_per_unit,
             )
@@ -145,51 +149,78 @@ async def create_order(
     await db.commit()
     await db.refresh(order)
 
-    all_slugs = unique_slugs + ([request.upsell_slug] if upsell_accepted and request.upsell_slug else [])
-    asyncio.create_task(_post_order_tasks(order, all_slugs, tracking_dict, ip_address))
+    all_slugs = list(slug_counts.keys()) + ([request.upsell_slug] if upsell_accepted and request.upsell_slug else [])
+
+    # Snapshot item data while session is still active to avoid
+    # lazy-load MissingGreenlet error in the background task.
+    items_data = [
+        {
+            "slug": item.product_slug,
+            "quantity": item.quantity,
+            "name": pricing_svc.PRODUCT_NAMES_FR.get(item.product_slug, item.product_slug),
+            "sku": pricing_svc.PRODUCT_SKUS.get(item.product_slug, item.product_slug),
+        }
+        for item in order.items
+    ]
+
+    order_snapshot = {
+        "id": order.id,
+        "order_number": order.order_number,
+        "customer_name": order.customer_name,
+        "phone": order.phone,
+        "total_fcfa": order.total_fcfa,
+        "created_at": order.created_at,
+        "event_id": order.event_id,
+        "user_agent": order.user_agent,
+        "fbp": order.fbp,
+        "fbc": order.fbc,
+        "ttp": order.ttp,
+        "sc_click_id": order.sc_click_id,
+    }
+
+    asyncio.create_task(_post_order_tasks(order_snapshot, items_data, all_slugs, tracking_dict, ip_address))
 
     return order
 
 
 async def _post_order_tasks(
-    order: Order,
+    order: dict,
+    items_data: list[dict],
     all_slugs: list[str],
     tracking: dict,
     ip_address: str,
 ) -> None:
-    product_names = []
-    product_skus = []
-    product_quantities = []
-    for item in order.items:
-        product_names.append(pricing_svc.PRODUCT_NAMES_FR.get(item.product_slug, item.product_slug))
-        product_skus.append(pricing_svc.PRODUCT_SKUS.get(item.product_slug, item.product_slug))
-        product_quantities.append(str(item.quantity))
+    product_names = [item["name"] for item in items_data]
+    product_skus = [item["sku"] for item in items_data]
+    product_quantities = [str(item["quantity"]) for item in items_data]
 
     sheet_payload = {
-        "date": order.created_at.strftime("%d/%m/%Y"),
-        "order_id": order.order_number,
+        "date": order["created_at"].strftime("%d/%m/%Y"),
+        "order_id": order["order_number"],
         "country": "Sénégal",
-        "name": order.customer_name,
-        "phone": order.phone,
+        "name": order["customer_name"],
+        "phone": order["phone"],
         "product": "/".join(product_names),
         "sku": "/".join(product_skus),
         "quantity": "/".join(product_quantities),
-        "total_price": order.total_fcfa,
+        "total_price": order["total_fcfa"],
         "currency": "CFA",
         "status": "",
     }
 
+    event_id = order["event_id"] or str(order["id"])
+
     capi_kwargs = dict(
-        event_id=order.event_id or str(order.id),
-        order_number=order.order_number,
-        total_fcfa=order.total_fcfa,
+        event_id=event_id,
+        order_number=order["order_number"],
+        total_fcfa=order["total_fcfa"],
         slugs=all_slugs,
-        customer_name=order.customer_name,
-        phone_local=order.phone,
+        customer_name=order["customer_name"],
+        phone_local=order["phone"],
         ip_address=ip_address,
-        user_agent=order.user_agent or "",
-        fbp=order.fbp,
-        fbc=order.fbc,
+        user_agent=order["user_agent"] or "",
+        fbp=order["fbp"],
+        fbc=order["fbc"],
         page_url=tracking.get("page_url"),
     )
 
@@ -197,24 +228,24 @@ async def _post_order_tasks(
         sheets_svc.sync_order_to_sheet(sheet_payload),
         meta_capi.send_purchase_event(**capi_kwargs),
         tiktok_capi.send_purchase_event(
-            event_id=order.event_id or str(order.id),
-            order_number=order.order_number,
-            total_fcfa=order.total_fcfa,
+            event_id=event_id,
+            order_number=order["order_number"],
+            total_fcfa=order["total_fcfa"],
             slugs=all_slugs,
-            phone_local=order.phone,
+            phone_local=order["phone"],
             ip_address=ip_address,
-            user_agent=order.user_agent or "",
-            ttp=order.ttp,
+            user_agent=order["user_agent"] or "",
+            ttp=order["ttp"],
         ),
         snap_capi.send_purchase_event(
-            event_id=order.event_id or str(order.id),
-            total_fcfa=order.total_fcfa,
-            order_number=order.order_number,
+            event_id=event_id,
+            total_fcfa=order["total_fcfa"],
+            order_number=order["order_number"],
             slugs=all_slugs,
-            phone_local=order.phone,
+            phone_local=order["phone"],
             ip_address=ip_address,
-            user_agent=order.user_agent or "",
-            sc_click_id=order.sc_click_id,
+            user_agent=order["user_agent"] or "",
+            sc_click_id=order["sc_click_id"],
         ),
         return_exceptions=True,
     )

@@ -26,26 +26,25 @@ def compute_total(
 ) -> tuple[int, int, int]:
     """
     Returns (tier_base_fcfa, total_fcfa, tier_count).
-    Upsell adds 540 FCFA on top of tier if accepted and valid.
+    Upsell adds 23000 FCFA on top of tier if accepted and valid.
     """
-    unique = list(dict.fromkeys(s for s in slugs if s in VALID_SLUGS))
-    tier_count = len(unique)
-    if tier_count == 0 or tier_count > 3:
-        raise ValueError(f"Invalid number of unique SKUs: {tier_count}")
+    valid_slugs_list = [s for s in slugs if s in VALID_SLUGS]
+    total_items = len(valid_slugs_list)
+    if total_items == 0:
+        raise ValueError("Cart cannot be empty")
 
-    tier_base = TIER_PRICES[tier_count]
+    bundles_of_3 = total_items // 3
+    remainder = total_items % 3
+    
+    tier_base = (bundles_of_3 * TIER_PRICES[3]) + (TIER_PRICES.get(remainder, 0) if remainder > 0 else 0)
     total = tier_base
 
     if upsell_accepted and upsell_slug:
         if upsell_slug not in VALID_SLUGS:
             raise ValueError(f"Invalid upsell slug: {upsell_slug}")
-        if upsell_slug in unique:
-            raise ValueError("Upsell SKU already in cart")
-        if tier_count >= 3:
-            raise ValueError("Cannot upsell when cart already has 3 unique products")
         total += UPSELL_PRICE
 
-    return tier_base, total, tier_count
+    return tier_base, total, total_items
 
 
 def validate_slugs(slugs: list[str]) -> None:
