@@ -25,7 +25,11 @@ async def sync_order_to_sheet(payload: dict[str, Any]) -> bool:
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-                resp = await client.post(url, json=payload)
+                resp = await client.post(
+                    url,
+                    json=payload,
+                    headers={"Content-Type": "application/json; charset=utf-8"},
+                )
                 resp.raise_for_status()
                 logger.info("Sheet sync OK (attempt %d): %s", attempt, resp.text[:200])
                 return True
