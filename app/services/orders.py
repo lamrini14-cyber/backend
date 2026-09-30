@@ -145,38 +145,47 @@ async def create_order(
             )
         )
 
+    # Build item snapshot BEFORE commit from local data (avoids lazy-load)
+    items_data = [
+        {
+            "slug": slug,
+            "quantity": qty,
+            "name": pricing_svc.PRODUCT_NAMES_FR.get(slug, slug),
+            "sku": pricing_svc.PRODUCT_SKUS.get(slug, slug),
+        }
+        for slug, qty in slug_counts.items()
+    ]
+    if upsell_accepted and request.upsell_slug:
+        items_data.append({
+            "slug": request.upsell_slug,
+            "quantity": 1,
+            "name": pricing_svc.PRODUCT_NAMES_FR.get(request.upsell_slug, request.upsell_slug),
+            "sku": pricing_svc.PRODUCT_SKUS.get(request.upsell_slug, request.upsell_slug),
+        })
+
+    # Snapshot order fields BEFORE commit (scalar fields are safe)
+    order_snapshot = {
+        "order_number": order_number,
+        "customer_name": request.customer_name,
+        "phone": phone,
+        "total_fcfa": total_fcfa,
+        "event_id": tracking_dict.get("event_id"),
+        "user_agent": tracking_dict.get("user_agent"),
+        "fbp": tracking_dict.get("fbp"),
+        "fbc": tracking_dict.get("fbc"),
+        "ttp": tracking_dict.get("ttp"),
+        "sc_click_id": tracking_dict.get("sc_click_id"),
+    }
+
     db.add(order)
     await db.commit()
     await db.refresh(order)
 
+    # Add DB-generated fields after commit
+    order_snapshot["id"] = order.id
+    order_snapshot["created_at"] = order.created_at
+
     all_slugs = list(slug_counts.keys()) + ([request.upsell_slug] if upsell_accepted and request.upsell_slug else [])
-
-    # Snapshot item data while session is still active to avoid
-    # lazy-load MissingGreenlet error in the background task.
-    items_data = [
-        {
-            "slug": item.product_slug,
-            "quantity": item.quantity,
-            "name": pricing_svc.PRODUCT_NAMES_FR.get(item.product_slug, item.product_slug),
-            "sku": pricing_svc.PRODUCT_SKUS.get(item.product_slug, item.product_slug),
-        }
-        for item in order.items
-    ]
-
-    order_snapshot = {
-        "id": order.id,
-        "order_number": order.order_number,
-        "customer_name": order.customer_name,
-        "phone": order.phone,
-        "total_fcfa": order.total_fcfa,
-        "created_at": order.created_at,
-        "event_id": order.event_id,
-        "user_agent": order.user_agent,
-        "fbp": order.fbp,
-        "fbc": order.fbc,
-        "ttp": order.ttp,
-        "sc_click_id": order.sc_click_id,
-    }
 
     asyncio.create_task(_post_order_tasks(order_snapshot, items_data, all_slugs, tracking_dict, ip_address))
 
